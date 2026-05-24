@@ -213,8 +213,10 @@ static void publishDiscovery() {
         "\"device_class\":\"motion\","
         + deviceJson() +
       "}";
-    mqtt.publish(cfgTopic.c_str(), payload.c_str(), true);
-    Serial.println("[MQTT] Published binary_sensor discovery");
+    Serial.printf("[MQTT] binary_sensor topic: %s\n", cfgTopic.c_str());
+    Serial.printf("[MQTT] binary_sensor payload: %s\n", payload.c_str());
+    bool ok = mqtt.publish(cfgTopic.c_str(), payload.c_str(), true);
+    Serial.printf("[MQTT] Published binary_sensor discovery: %s\n", ok ? "OK" : "FAILED");
   }
 
   // ── Light (LED) ────────────────────────────────────────────────────────
@@ -234,8 +236,10 @@ static void publishDiscovery() {
         "\"payload_not_available\":\"offline\","
         + deviceJson() +
       "}";
-    mqtt.publish(cfgTopic.c_str(), payload.c_str(), true);
-    Serial.println("[MQTT] Published light discovery");
+    Serial.printf("[MQTT] light topic: %s\n", cfgTopic.c_str());
+    Serial.printf("[MQTT] light payload: %s\n", payload.c_str());
+    bool ok2 = mqtt.publish(cfgTopic.c_str(), payload.c_str(), true);
+    Serial.printf("[MQTT] Published light discovery: %s\n", ok2 ? "OK" : "FAILED");
   }
 }
 
