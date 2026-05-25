@@ -3,7 +3,7 @@
 Single-flash firmware for an ESP32-WROOM-DA that provides:
 - **First-boot captive portal** — configure WiFi + MQTT + OTA via browser
 - **Home Assistant auto-discovery** — button and LED appear automatically in HA via MQTT
-- **Factory reset** — hold GPIO33 for 5 s to wipe config and re-enter setup mode
+- **Factory reset** — hold GPIO10 for 5 s to wipe config and re-enter setup mode
 
 ---
 
@@ -11,8 +11,8 @@ Single-flash firmware for an ESP32-WROOM-DA that provides:
 
 | Signal | GPIO | Notes |
 |--------|------|-------|
-| Button | 33 | INPUT_PULLUP, active low |
-| LED    | 23 | Active high |
+| Button | 10 | INPUT_PULLUP, active low |
+| LED    | 9  | Active high |
 
 ---
 
@@ -32,7 +32,7 @@ Power on
 ```
 
 ### Factory Reset
-Hold GPIO33 for **5 seconds** — LED flashes 3× → NVS wiped → reboot to AP mode.
+Hold GPIO10 for **5 seconds** — LED flashes 3× → NVS wiped → reboot to AP mode.
 
 ---
 
@@ -56,6 +56,8 @@ pio run -t upload          # USB first flash
 pio device monitor         # serial monitor
 ```
 
+PlatformIO uses `espressif32@6.9.0` (Arduino core ~3.3.8) and `PubSubClient ^2.8` as declared in `platformio.ini`. Monitor speed is 115200, upload speed 921600.
+
 ---
 
 ## First Boot — Setup Portal
@@ -64,12 +66,14 @@ On first boot the device starts a WiFi AP named `DIY-Button-Setup-xxxxxxxx` (no 
 Connect to it from any phone or laptop — a captive portal pop-up should appear automatically.
 If it doesn't, browse to `http://192.168.4.1`.
 
+The portal handles captive-portal probe URLs for iOS/macOS, Android, Windows (NCSI), and Firefox, so the pop-up triggers on most devices without manual navigation.
+
 | Field | Description |
 |-------|-------------|
 | Device Name | Alphanumeric + `-_`, used as MQTT nodeId prefix and OTA hostname |
 | WiFi SSID | Your 2.4 GHz network name |
 | WiFi Password | Leave blank for open networks |
-| MQTT Broker | IP address of your MQTT broker / Home Assistant host |
+| MQTT Broker | IP address or hostname of your MQTT broker / Home Assistant host |
 | MQTT Port | Default 1883 |
 | MQTT Username | Optional — leave blank if broker has no auth |
 | MQTT Password | Optional — leave blank if broker has no auth |
@@ -104,7 +108,7 @@ After the device connects, HA automatically adds both entities under a single De
 | Entity | Type | Description |
 |--------|------|-------------|
 | `binary_sensor.<deviceName>_button` | Binary Sensor | Pulses ON→OFF on each button press |
-| `light.<deviceName>_led` | Light | Turn GPIO23 LED on/off from HA |
+| `light.<deviceName>_led` | Light | Turn GPIO9 LED on/off from HA |
 
 Find them at: Settings → Devices & Services → Devices → search your device name.
 
@@ -161,6 +165,7 @@ DIYButton/
 - **PubSubClient buffer must be 1024** — `setBufferSize(1024)` in code + `MQTT_MAX_PACKET_SIZE=1024` in `platformio.ini`. Discovery payloads are ~570 bytes and silently fail if the buffer is too small.
 - **`"platform":"mqtt"` required** — HA 2026.x will not process discovery payloads without this field.
 - **NVS `isConfigured()`** is cached with a `static int8_t` so NVS isn't polled every loop iteration.
+- **WiFi watchdog** — if WiFi drops during normal operation the device reboots automatically after 3 s rather than attempting reconnection.
 - **jmdns noise in Arduino IDE** — launch with `arduino 2>/dev/null` to suppress Java mDNS exception spam in the terminal.
 
 ---
