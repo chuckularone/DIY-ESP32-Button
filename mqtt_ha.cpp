@@ -60,7 +60,7 @@ static String deviceJson() {
     "\"device\":{"
       "\"identifiers\":[\"" + nodeId + "\"],"
       "\"name\":\"" + String(_cfg.deviceName) + "\","
-      "\"model\":\"DIY Button (ESP32-WROOM-DA)\","
+      "\"model\":\"DIY Button (ESP32)\","
       "\"manufacturer\":\"DIY\","
       "\"sw_version\":\"1.0.0\","
       "\"connections\":[[\"mac\",\"" + mac + "\"]]"

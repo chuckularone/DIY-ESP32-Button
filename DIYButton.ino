@@ -5,7 +5,7 @@
  * Hardware:
  *   GPIO33 - Button (INPUT_PULLUP, active low)
  *   GPIO23 - LED
- *   ESP32-WROOM-DA (esp32dev, Arduino core 3.3.8)
+ *   ESP32 (esp32dev, Arduino core 3.3.8)
  *
  * Boot flow:
  *   First boot (no NVS config) → AP "DIY-Button-Setup-xxxxxxxx" + captive portal

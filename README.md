@@ -1,6 +1,6 @@
 # DIYButton — Self-contained ESP32 Firmware
 
-Single-flash firmware for an ESP32-WROOM-DA that provides:
+Single-flash firmware for an ESP32 that provides:
 - **First-boot captive portal** — configure WiFi + MQTT + OTA via browser
 - **Home Assistant auto-discovery** — button and LED appear automatically in HA via MQTT
 - **Factory reset** — hold GPIO10 for 5 s to wipe config and re-enter setup mode
