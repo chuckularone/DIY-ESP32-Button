@@ -210,7 +210,6 @@ static void publishDiscovery() {
         "\"availability_topic\":\"" + availTopic + "\","
         "\"payload_available\":\"online\","
         "\"payload_not_available\":\"offline\","
-        "\"device_class\":\"motion\","
         + deviceJson() +
       "}";
     Serial.printf("[MQTT] binary_sensor topic: %s\n", cfgTopic.c_str());
