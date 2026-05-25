@@ -89,7 +89,7 @@ void setupMQTT(const DeviceConfig& cfg, int pinButton, int pinLed) {
   mqtt.setServer(_cfg.mqttHost, _cfg.mqttPort);
   mqtt.setCallback(onMessage);
   mqtt.setKeepAlive(MQTT_KEEPALIVE_SEC);
-  mqtt.setBufferSize(512);   // discovery payloads can be large
+  mqtt.setBufferSize(1024);   // discovery payloads can be large
 
   Serial.printf("[MQTT] Broker: %s:%u\n", _cfg.mqttHost, _cfg.mqttPort);
   Serial.printf("[MQTT] nodeId: %s\n", nodeId.c_str());
