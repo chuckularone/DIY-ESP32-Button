@@ -30,8 +30,8 @@
 #include "base64_util.h"
 
 // ── GPIO ─────────────────────────────────────────────────────────────────────
-#define PIN_BUTTON  33
-#define PIN_LED     23
+#define PIN_BUTTON  10
+#define PIN_LED     9
 
 // ── Globals ───────────────────────────────────────────────────────────────────
 Preferences prefs;
