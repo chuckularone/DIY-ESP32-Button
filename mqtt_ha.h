@@ -5,5 +5,5 @@
 
 #include "config.h"
 
-void setupMQTT(const DeviceConfig& cfg, int pinButton, int pinLed);
+void setupMQTT(const DeviceConfig& cfg, int pinLed);
 void loopNormal();

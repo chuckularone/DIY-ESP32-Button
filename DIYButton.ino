@@ -3,14 +3,15 @@
  * Captive portal first-boot config + Home Assistant MQTT button/light
  *
  * Hardware:
- *   GPIO33 - Button (INPUT_PULLUP, active low)
- *   GPIO23 - LED
- *   ESP32 (esp32dev, Arduino core 3.3.8)
+ *   GPIO9  - LED  (fixed)
+ *   Button GPIOs are configured via the captive portal (1–5 buttons).
+ *   Defaults: Button1=GPIO10, Button2=GPIO20, Button3=GPIO21,
+ *             Button4=GPIO0,  Button5=GPIO1
  *
  * Boot flow:
  *   First boot (no NVS config) → AP "DIY-Button-Setup-xxxxxxxx" + captive portal
  *   Normal boot (config present) → WiFi + MQTT + HA auto-discovery
- *   Hold GPIO33 5s → wipe NVS → reboot to AP mode
+ *   Hold Button 1 (first configured button) 5s → wipe NVS → reboot to AP mode
  */
 
 #include <WiFi.h>
@@ -29,9 +30,8 @@
 #include "mqtt_ha.h"
 #include "base64_util.h"
 
-// ── GPIO ─────────────────────────────────────────────────────────────────────
-#define PIN_BUTTON  10
-#define PIN_LED     9
+// ── GPIO ──────────────────────────────────────────────────────────────────────
+#define PIN_LED  9
 
 // ── Globals ───────────────────────────────────────────────────────────────────
 Preferences prefs;
@@ -39,9 +39,8 @@ WebServer   server(80);
 DNSServer   dns;
 
 DeviceConfig cfg;           // populated by loadConfig() or portal
-bool         ledState = false;
 
-// ── Forward declarations ───────────────────────────────────────────────────────
+// ── Forward declarations ──────────────────────────────────────────────────────
 void startAPMode();
 void startNormalMode();
 void handleOTA();
@@ -53,7 +52,6 @@ void setup() {
   delay(500);
   Serial.println("\n\n[DIYButton] Booting…");
 
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
 
@@ -63,9 +61,21 @@ void setup() {
 
   if (loadConfig(prefs, cfg)) {
     Serial.println("[DIYButton] Config found → normal mode");
+
+    // Set up all configured button pins
+    for (int i = 0; i < cfg.buttonCount; i++) {
+      pinMode(cfg.buttonPins[i], INPUT_PULLUP);
+      Serial.printf("[DIYButton] Button %d → GPIO%d\n", i + 1, cfg.buttonPins[i]);
+    }
+
     startNormalMode();
   } else {
     Serial.println("[DIYButton] No config → AP/portal mode");
+
+    // In AP mode we don't know the final pin assignment yet, but set up the
+    // default Button 1 pin so the 5s reset hold still works during provisioning.
+    pinMode(DEFAULT_BUTTON_PINS[0], INPUT_PULLUP);
+
     startAPMode();
   }
 }
@@ -74,11 +84,14 @@ void setup() {
 void loop() {
   static bool configured = isConfigured(prefs);
 
-  // ── Reset hold detection (works in both modes) ──────────────────────────
+  // ── Reset hold detection (works in both modes) ────────────────────────────
+  // Always watches Button 1 (first pin: configured or default)
+  int resetPin = configured ? cfg.buttonPins[0] : DEFAULT_BUTTON_PINS[0];
+
   static unsigned long btnHoldStart = 0;
   static bool          btnWasHeld   = false;
 
-  if (digitalRead(PIN_BUTTON) == LOW) {
+  if (digitalRead(resetPin) == LOW) {
     if (btnHoldStart == 0) btnHoldStart = millis();
     if (!btnWasHeld && (millis() - btnHoldStart >= 5000)) {
       btnWasHeld = true;
@@ -95,17 +108,15 @@ void loop() {
   }
 
   if (configured) {
-    loopNormal();   // defined in mqtt_ha.cpp
+    loopNormal();              // defined in mqtt_ha.cpp
   } else {
-    loopPortal(server, dns);  // defined in portal.cpp
+    loopPortal(server, dns);   // defined in portal.cpp
   }
 }
 
 // =============================================================================
 void startAPMode() {
   String mac = WiFi.macAddress();
-  // Compute deterministic 8-char suffix: first 8 chars of hex MD5(MAC)
-  // We use a simple djb2 hash for brevity (no mbedtls MD5 needed for cosmetics)
   uint32_t h = 5381;
   for (char c : mac) h = ((h << 5) + h) ^ (uint8_t)c;
   char suffix[9];
@@ -121,7 +132,6 @@ void startAPMode() {
   IPAddress apIP(192, 168, 4, 1);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
 
-  // DNS wildcard → all hostnames resolve to 192.168.4.1
   dns.start(53, "*", apIP);
 
   setupPortal(server, prefs, cfg);
@@ -159,7 +169,7 @@ void startNormalMode() {
   ArduinoOTA.begin();
   Serial.println("[OTA] Ready");
 
-  setupMQTT(cfg, PIN_BUTTON, PIN_LED);
+  setupMQTT(cfg, PIN_LED);
 }
 
 // =============================================================================

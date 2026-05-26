@@ -3,24 +3,32 @@
  * config.h — DeviceConfig struct + NVS helpers
  * NVS namespace: "buttonconfig"
  * Keys: deviceName, ssid, wifiPass, mqttHost, mqttPort, mqttUser, mqttPass,
- *       otaPass, apiKey (display-only generated key)
+ *       otaPass, apiKey (display-only generated key),
+ *       buttonCount (1–5), btnPin0…btnPin4 (GPIO numbers)
  */
 
 #include <Preferences.h>
 #include <Arduino.h>
 
-#define NVS_NS "buttonconfig"
+#define NVS_NS        "buttonconfig"
+#define MAX_BUTTONS   5
+
+// Default GPIO assignments (matches original single-button wiring + 4 extras)
+static const int DEFAULT_BUTTON_PINS[MAX_BUTTONS] = { 10, 20, 21, 0, 1 };
 
 struct DeviceConfig {
-  char deviceName[64];   // e.g. "garage-button"
-  char ssid[64];
-  char wifiPass[64];
-  char mqttHost[64];     // IP or hostname
-  uint16_t mqttPort;     // default 1883
-  char mqttUser[64];
-  char mqttPass[64];
-  char otaPass[64];
-  char apiKey[64];       // base64 random key, generated on ESP32, display only
+  char     deviceName[64];   // e.g. "garage-button"
+  char     ssid[64];
+  char     wifiPass[64];
+  char     mqttHost[64];     // IP or hostname
+  uint16_t mqttPort;         // default 1883
+  char     mqttUser[64];
+  char     mqttPass[64];
+  char     otaPass[64];
+  char     apiKey[64];       // base64 random key, generated on ESP32, display only
+
+  uint8_t  buttonCount;                // 1–MAX_BUTTONS (default 1)
+  int      buttonPins[MAX_BUTTONS];    // GPIO numbers for each button
 };
 
 // Returns true if config exists and is populated
@@ -37,6 +45,17 @@ inline bool loadConfig(Preferences& prefs, DeviceConfig& cfg) {
     strlcpy(cfg.mqttPass,   prefs.getString("mqttPass",   "").c_str(),           sizeof(cfg.mqttPass));
     strlcpy(cfg.otaPass,    prefs.getString("otaPass",    "").c_str(),           sizeof(cfg.otaPass));
     strlcpy(cfg.apiKey,     prefs.getString("apiKey",     "").c_str(),           sizeof(cfg.apiKey));
+
+    cfg.buttonCount = (uint8_t)prefs.getUInt("buttonCount", 1);
+    if (cfg.buttonCount < 1 || cfg.buttonCount > MAX_BUTTONS)
+      cfg.buttonCount = 1;
+
+    char key[12];
+    for (int i = 0; i < MAX_BUTTONS; i++) {
+      snprintf(key, sizeof(key), "btnPin%d", i);
+      cfg.buttonPins[i] = (int)prefs.getInt(key, DEFAULT_BUTTON_PINS[i]);
+    }
+
     ok = (strlen(cfg.ssid) > 0 && strlen(cfg.mqttHost) > 0);
   }
   prefs.end();
@@ -54,6 +73,13 @@ inline void saveConfig(Preferences& prefs, const DeviceConfig& cfg) {
   prefs.putString("mqttPass",   cfg.mqttPass);
   prefs.putString("otaPass",    cfg.otaPass);
   prefs.putString("apiKey",     cfg.apiKey);
+
+  prefs.putUInt("buttonCount", cfg.buttonCount);
+  char key[12];
+  for (int i = 0; i < MAX_BUTTONS; i++) {
+    snprintf(key, sizeof(key), "btnPin%d", i);
+    prefs.putInt(key, cfg.buttonPins[i]);
+  }
   prefs.end();
 }
 
